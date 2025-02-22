@@ -4,9 +4,14 @@ const app = express();
 
 const supaUtrl = 'https://vqozrzkqoytldobjrzbo.supabase.co';
 const supaAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZxb3pyemtxb3l0bGRvYmpyemJvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDAyNTExNDYsImV4cCI6MjA1NTgyNzE0Nn0.pBmgXJJfx2Kw1kEU7OTfi2Om9Jo-S3qB1meY2DZwLgM';
-const port = 3000;
+const port = process.env.port || 3000;
 
 const supabase = supa.createClient(supaUtrl, supaAnonKey);
+
+// Define a simple route
+app.get("/", (req, res) => {
+  res.send("Hello from Glitch Node Server!");
+});
 
 // Returns all the eras
 app.get('/api/eras', async (req, res) => {
