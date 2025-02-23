@@ -98,11 +98,11 @@ app.get('/api/artists/search/:substring', async (req, res) => {
 
 // Returns all the artists whose nationality begins with the provided substring
 app.get('/api/artists/country/:substring', async (req, res) => {
-    const substring = req.params.substring.toLowerCase();
+    const substring = req.params.substring;
     const { data, error } = await supabase
       .from("artists")
       .select("*")
-      .ilike("nationality", substring + "%") // might give problems with case insensitivity.
+      .ilike("nationality", substring + "%") 
     let isError = errorHandler(error, data, res, "Artist with substring not found.");
     if (!isError) res.send(data);
 });
@@ -140,7 +140,7 @@ app.get('/api/paintings/:paintingId', async (req, res) => {
 });
 
 // Returns the paintings whose title contains the provided substring
-app.get('/api/paintings/search/substring', async (req, res) => {
+app.get('/api/paintings/search/:substring', async (req, res) => {
     const substring = req.params.substring;
     const { data, error } = await supabase
       .from("paintings")
@@ -187,7 +187,7 @@ app.get('/api/paintings/artist/:artistId', async (req, res) => {
 });
 
 // Returns all the paintings by artists whose nationality begins with the provided substring
-app.get('/api/paintings/artists/country/:substring', async (req, res) => {
+app.get('/api/paintings/artist/country/:substring', async (req, res) => {
     const substring = req.params.substring;
     const { data, error } = await supabase
       .from("paintings")
@@ -233,21 +233,29 @@ app.get('/api/paintings/genre/:genreId', async (req, res) => {
     const genreId = req.params.genreId;
     const { data, error } = await supabase
       .from("paintinggenres")
-      .select("paintings (*)")
+      .select("paintings ( paintingId, title, yearOfWork)")
       .eq("genreId", genreId)
+      .order("yearOfWork", { ascending: true, foreignTable: "paintings" });
     let isError = errorHandler(error, data, res, "No paintings found for the genre.");
-    if (!isError) res.send(data);
+    if (!isError){
+      const paintings = data.map((item) => item.paintings);
+      res.send(paintings);
+    }
 });
 
 // Returns all the paintings for a given era
 app.get('/api/paintings/era/:eraId', async (req, res) => {
     const eraId = req.params.eraId;
     const { data, error } = await supabase
-      .from("paintings")
-      .select("*, artists (*), galleries (*)")
-      .eq("eraId", eraId)
+      .from("paintinggenres")
+      .select("paintings ( paintingId, title, yearOfWork), genres!inner ( eraId )")
+      .eq("genres.eraId", eraId)
+      .order("yearOfWork", { ascending: true, foreignTable: "paintings" });
     let isError = errorHandler(error, data, res, "No paintings found for the era.");
-    if (!isError) res.send(data);
+    if (!isError){
+      const paintings = data.map((item) => item.paintings);
+      res.send(paintings);
+    }
 });
 
 // Returns the genre name and the number of paintings for each genre,
@@ -256,19 +264,20 @@ app.get('/api/counts/genres', async (req, res) => {
     const { data, error } = await supabase
       .from("paintinggenres")
       .select("genreId, genres ( genreName )");
-    let isError = errorHandler(error, data, res, "No eras found.");
+    let isError = errorHandler(error, data, res, "No paintings found for given era.");
     if (isError) return;
-    
-    const genreCount = data.reduce((acc, curr) => {
-      const genreName = ClipboardItem.genres[0].genreName;
-      acc[genreName] = (acc[genreName] || 0) + 1;
-      return acc;
-    }, {});
 
-    const sortedGenres = Object.entries(genreCount)
-      .map(([genreName, count]) => ({ genreName, count }))
-      .sort((a, b) => a.count - b.count);
-    res.send(sortedGenres);
+    const paintingMap = {};
+    data.forEach((item) => {
+      const genreId = item.genreId;
+      const genreName = item.genres?.genreName || "Unknown";
+      if (!paintingMap[genreId]) {
+        paintingMap[genreId] = { genreId: genreId, genreName: genreName, count: 0 };
+      }
+      paintingMap[genreId].count++;
+    });
+    let result = Object.values(paintingMap).sort((a, b) => a.count - b.count);
+    res.send(result);
 });
 
 // Returns the artist name, and the number of paintings for each artist,
@@ -276,52 +285,48 @@ app.get('/api/counts/genres', async (req, res) => {
 app.get('/api/counts/artists', async (req, res) => {
     const { data, error } = await supabase
       .from("paintings")
-      .select("artistId, artists ( firstName, lastName )");
-
-    let isError = errorHandler(error, data, res, "No eras found.");
+      .select("artistId, artists!inner ( firstName, lastName )");
+    let isError = errorHandler(error, data, res, "No paintings found for artists.");
     if (isError) return;
 
-    const artistCount = data.reduce((acc, item) => {
-      const { firstName, lastName } = item.artists[0];
-      const fullName = `${firstName} ${lastName}`;
-      acc[fullName] = (acc[fullName] || 0) + 1;
-      return acc;
-    }, {});
-
-    const sortedArtists = Object.entries(artistCount)
-      .map(([fullName, count]) => ({ fullName, count }))
-      .sort((a, b) => b.count - a.count);
-    res.send(sortedArtists);
+    const artistMap = {};
+    data.forEach((item) => {
+      const artistId = item.artistId;
+      const artistName = `${item.artists?.firstName || ""} ${item.artists?.lastName || ""}`.trim();
+      if (!artistMap[artistId]) {
+        artistMap[artistId] = { artistId: artistId, artistName: artistName, count: 0 };
+      }
+      artistMap[artistId].count++;
+    });
+    let result = Object.values(artistMap).sort((a, b) => b.count - a.count);
+    res.send(result);
 });
 
 // Returns the genre name and the number of paintings for each genre,
 // sorted by the number of paintings (most to least) for genres having
 // over some set number of paintings.
 app.get('/api/counts/topgenres/:paintingCount', async (req, res) => {
-    const threshold = parseInt(req.params.ref, 10);
-    if (isNaN(threshold)) {
-      res.status(400).json({ error: "Invalid threshold" });
-      return;
-    }
-
+    const minNum = parseInt(req.params.paintingCount, 10);
     const { data, error } = await supabase
       .from("paintinggenres")
       .select("genreId, genres ( genreName )");
-
-    let isError = errorHandler(error, data, res, "No eras found.");
+    let isError = errorHandler(error, data, res, "No paintings found for given genre.");
     if (isError) return;
 
-    const genreCount = data.reduce((acc, curr) => {
-      const genreName = curr.genres[0].genreName;
-      acc[genreName] = (acc[genreName] || 0) + 1;
-      return acc;
-    }, {});
-
-    const filtered = Object.entries(genreCount)
-      .map(([genreName, count]) => ({ genreName, count }))
-      .filter((count) => count > threshold)
-      .sort((a, b) => b.count - a.count);
-    res.send(filtered);
+    const paintingMap = {};
+    data.forEach((item) => {
+      const genreId = item.genreId;
+      const genreName = item.genres?.genreName || "Unknown";
+      if (!paintingMap[genreId]) {
+        paintingMap[genreId] = { genreId: genreId, genreName: genreName, count: 0 };
+      }
+      paintingMap[genreId].count++;
+    });
+    let result = Object.values(paintingMap).filter((item) => item.count > minNum).sort((a, b) => b.count - a.count);
+    if (result.length === 0) {
+      return res.status(404).json({ error: "No genres found with the specified painting count." });
+    }
+    res.send(result);
 });
 
 app.listen(port, () => { // Will likely be changed to a server. 
