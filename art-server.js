@@ -115,6 +115,9 @@ app.get('/api/paintings', async (req, res) => {
 // Returns all the paintings, sorted by either title or yearOfWork
 app.get('/api/paintings/sort/:sort', async (req, res) => {
     const sort = req.params.sort;
+    if (!["title", "yearOfWork"].includes(sort)) {
+      return res.status(400).json({ error: "Sort must be either of type 'title' or 'yearOfWork'." });
+    }
     const { data, error } = await supabase
       .from("paintings")
       .select("*, artists (*), galleries (*)")
@@ -189,8 +192,9 @@ app.get('/api/paintings/artist/country/:substring', async (req, res) => {
     const substring = req.params.substring;
     const { data, error } = await supabase
       .from("paintings")
-      .select("*, artists (*), galleries (*)")
-      .ilike("nationality", substring + "%")
+      .select("*, artists!inner(*), galleries (*)")
+      .ilike("artists.nationality", substring + "%")
+      .order("title", { ascending: true });
     let isError = errorHandler(error, data, res, `No paintings found by artists with nationality substring ${substring}.`);
     if (!isError) res.send(data);
 });
@@ -220,8 +224,9 @@ app.get('/api/genres/painting/:paintingId', async (req, res) => {
     const paintingId = req.params.paintingId;
     const { data, error } = await supabase
       .from("paintinggenres")
-      .select("genres (*)")
+      .select("paintingId, genres (*)")
       .eq("paintingId", paintingId)
+      .order("genreName", { ascending: true, foreignTable: "genres" });
     let isError = errorHandler(error, data, res, `No genres found for painting with id ${paintingId}.`);
     if (!isError) res.send(data);
 });
