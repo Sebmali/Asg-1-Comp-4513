@@ -8,6 +8,18 @@ const port = process.env.port || 3000;
 
 const supabase = supa.createClient(supaUtrl, supaAnonKey);
 
+function errorHandler(error, data, res, message) {
+    if (error) {
+      res.status(500).json({ error: error.message });
+      return false;
+    }
+    if (!data || data.length === 0) {
+      res.status(404).json({ error: message });
+      return false;
+    }
+    return true;
+}
+
 // Define a simple route
 app.get("/", (req, res) => {
   res.send("Hello from Glitch Node Server!");
@@ -18,7 +30,8 @@ app.get('/api/eras', async (req, res) => {
     const { data, error } = await supabase
       .from("eras")
       .select("*")
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the galleries
@@ -26,7 +39,8 @@ app.get('/api/galleries', async (req, res) => {
     const { data, error } = await supabase
       .from("galleries")
       .select("*")
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns just the specified galley
@@ -36,7 +50,8 @@ app.get('/api/galleries/:galleryId', async (req, res) => {
       .from("galleries")
       .select("*")
       .eq("galleryId", galleryId)
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns the galleries whose galleryCountry begins with the provided substring
@@ -46,7 +61,8 @@ app.get('/api/galleries/country/:substring', async (req, res) => {
       .from("galleries")
       .select("*")
       .ilike("galleryCountry", substring + "%")
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the artists
@@ -54,7 +70,8 @@ app.get('/api/artists', async (req, res) => {
     const { data, error } = await supabase
       .from("artists")
       .select("*")
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns just the specified artist
@@ -64,7 +81,8 @@ app.get('/api/artists/:artistId', async (req, res) => {
       .from("artists")
       .select("*")
       .eq("artistId", artistId)
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns the artists whose last name begins with the provided substring
@@ -74,7 +92,8 @@ app.get('/api/artists/search/:substring', async (req, res) => {
       .from("artists")
       .select("*")
       .ilike("lastName", substring + "%")
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the artists whose nationality begins with the provided substring
@@ -84,7 +103,8 @@ app.get('/api/artists/country/:substring', async (req, res) => {
       .from("artists")
       .select("*")
       .ilike("nationality", substring + "%") // might give problems with case insensitivity.
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all paintings
@@ -93,7 +113,8 @@ app.get('/api/paintings', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .order("title", { ascending: true });
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the paintings, sorted by either title or yearOfWork
@@ -103,7 +124,8 @@ app.get('/api/paintings/sort/:sort', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .order(sort, { ascending: true });
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns just the specified painting
@@ -113,7 +135,8 @@ app.get('/api/paintings/:paintingId', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .eq("paintingId", paintingId)
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns the paintings whose title contains the provided substring
@@ -123,7 +146,8 @@ app.get('/api/paintings/search/substring', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .ilike("title", "%" + substring + "%")
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns the paintings between the two years (inclusive), ordered by yearOfWork
@@ -136,7 +160,8 @@ app.get('/api/paintings/years/:start/:end', async (req, res) => {
       .gte("yearOfWork", start) // >= start
       .lte("yearOfWork", end) // <= end
       .order("yearOfWork", { ascending: true });
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the paintings in a given gallery
@@ -146,7 +171,8 @@ app.get('/api/paintings/galleries/:galleryId', async (req, res) => {
       .from("paintings")
       .select("*, artists (*)")
       .eq("galleryId", galleryId)
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the paintings by a given artist
@@ -156,7 +182,8 @@ app.get('/api/paintings/artist/:artistId', async (req, res) => {
       .from("paintings")
       .select("*, galleries (*)")
       .eq("artistId", artistId)
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the paintings by artists whose nationality begins with the provided substring
@@ -166,7 +193,8 @@ app.get('/api/paintings/artists/country/:substring', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .ilike("nationality", substring + "%")
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the genres
@@ -174,7 +202,8 @@ app.get('/api/genres', async (req, res) => {
     const { data, error } = await supabase
       .from("genres")
       .select("*, eras (*)")
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns just the specified genre
@@ -184,7 +213,8 @@ app.get('/api/genres/:genreId', async (req, res) => {
       .from("genres")
       .select("*, eras (*)")
       .eq("genreId", genreId)
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns the genres used in a given painting
@@ -194,7 +224,8 @@ app.get('/api/genres/painting/:paintingId', async (req, res) => {
       .from("paintinggenres")
       .select("genres (*)")
       .eq("paintingId", paintingId)
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the paintings for a given genre
@@ -204,7 +235,8 @@ app.get('/api/paintings/genre/:genreId', async (req, res) => {
       .from("paintinggenres")
       .select("paintings (*)")
       .eq("genreId", genreId)
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns all the paintings for a given era
@@ -214,7 +246,8 @@ app.get('/api/paintings/era/:eraId', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .eq("eraId", eraId)
-    res.send(data);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns the genre name and the number of paintings for each genre,
@@ -234,7 +267,8 @@ app.get('/api/counts/genres', async (req, res) => {
         }
     });
     let resultCount = Object.values(genreCount).sort((a, b) => a - b);
-    res.send(resultCount);
+    let isError = errorHandler(error, data, res, "No eras found.");
+    if (!isError) res.send(data);
 });
 
 // Returns the artist name, and the number of paintings for each artist,
