@@ -20,11 +20,6 @@ function errorHandler(error, data, res, message) {
     return false;
 }
 
-// Define a simple route
-app.get("/", (req, res) => {
-  res.send("Hello from Glitch Node Server!");
-});
-
 // Returns all the eras
 app.get('/api/eras', async (req, res) => {
     const { data, error } = await supabase
@@ -50,7 +45,7 @@ app.get('/api/galleries/:galleryId', async (req, res) => {
       .from("galleries")
       .select("*")
       .eq("galleryId", galleryId)
-    let isError = errorHandler(error, data, res, "Specified gallery not found.");
+    let isError = errorHandler(error, data, res, `No gallery with id ${galleryId} found.`);
     if (!isError) res.send(data);
 });
 
@@ -61,7 +56,7 @@ app.get('/api/galleries/country/:substring', async (req, res) => {
       .from("galleries")
       .select("*")
       .ilike("galleryCountry", substring + "%")
-    let isError = errorHandler(error, data, res, "Galleries with substring not found.");
+    let isError = errorHandler(error, data, res, `No galleries found with country substring ${substring}.`);
     if (!isError) res.send(data);
 });
 
@@ -81,7 +76,7 @@ app.get('/api/artists/:artistId', async (req, res) => {
       .from("artists")
       .select("*")
       .eq("artistId", artistId)
-    let isError = errorHandler(error, data, res, "Specified artist not found.");
+    let isError = errorHandler(error, data, res, `No artist with id ${artistId} found.`);
     if (!isError) res.send(data);
 });
 
@@ -92,7 +87,7 @@ app.get('/api/artists/search/:substring', async (req, res) => {
       .from("artists")
       .select("*")
       .ilike("lastName", substring + "%")
-    let isError = errorHandler(error, data, res, "Artist with substring not found.");
+    let isError = errorHandler(error, data, res, `No artists found with last name substring ${substring}.`);
     if (!isError) res.send(data);
 });
 
@@ -103,7 +98,7 @@ app.get('/api/artists/country/:substring', async (req, res) => {
       .from("artists")
       .select("*")
       .ilike("nationality", substring + "%") 
-    let isError = errorHandler(error, data, res, "Artist with substring not found.");
+    let isError = errorHandler(error, data, res, `No artist found with nationality substring ${substring}.`);
     if (!isError) res.send(data);
 });
 
@@ -124,7 +119,7 @@ app.get('/api/paintings/sort/:sort', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .order(sort, { ascending: true });
-    let isError = errorHandler(error, data, res, "No paintings found.");
+    let isError = errorHandler(error, data, res, `No paintings found sorted by ${sort}.`);
     if (!isError) res.send(data);
 });
 
@@ -135,7 +130,7 @@ app.get('/api/paintings/:paintingId', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .eq("paintingId", paintingId)
-    let isError = errorHandler(error, data, res, "Specified painting not found.");
+    let isError = errorHandler(error, data, res, `No painting with id ${paintingId} found.`);
     if (!isError) res.send(data);
 });
 
@@ -146,7 +141,7 @@ app.get('/api/paintings/search/:substring', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .ilike("title", "%" + substring + "%")
-    let isError = errorHandler(error, data, res, "Painting with substring not found.");
+    let isError = errorHandler(error, data, res, `No paintings found with title substring ${substring}.`);
     if (!isError) res.send(data);
 });
 
@@ -154,13 +149,16 @@ app.get('/api/paintings/search/:substring', async (req, res) => {
 app.get('/api/paintings/years/:start/:end', async (req, res) => {
     const start = req.params.start;
     const end = req.params.end;
+    if (start > end) {
+      return res.status(400).json({ error: "Start year must be less than or equal to end year." });
+    }
     const { data, error } = await supabase
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .gte("yearOfWork", start) // >= start
       .lte("yearOfWork", end) // <= end
       .order("yearOfWork", { ascending: true });
-    let isError = errorHandler(error, data, res, "No paintings found between the years.");
+    let isError = errorHandler(error, data, res, `No paintings found between ${start} and ${end}.`);
     if (!isError) res.send(data);
 });
 
@@ -171,7 +169,7 @@ app.get('/api/paintings/galleries/:galleryId', async (req, res) => {
       .from("paintings")
       .select("*, artists (*)")
       .eq("galleryId", galleryId)
-    let isError = errorHandler(error, data, res, "No paintings found in the gallery.");
+    let isError = errorHandler(error, data, res, `No paintings found in gallery with id ${galleryId}.`);
     if (!isError) res.send(data);
 });
 
@@ -182,7 +180,7 @@ app.get('/api/paintings/artist/:artistId', async (req, res) => {
       .from("paintings")
       .select("*, galleries (*)")
       .eq("artistId", artistId)
-    let isError = errorHandler(error, data, res, "No paintings found by the artist.");
+    let isError = errorHandler(error, data, res, `No paintings found by artist with id ${artistId}.`);
     if (!isError) res.send(data);
 });
 
@@ -193,7 +191,7 @@ app.get('/api/paintings/artist/country/:substring', async (req, res) => {
       .from("paintings")
       .select("*, artists (*), galleries (*)")
       .ilike("nationality", substring + "%")
-    let isError = errorHandler(error, data, res, "No paintings found by artists with substring.");
+    let isError = errorHandler(error, data, res, `No paintings found by artists with nationality substring ${substring}.`);
     if (!isError) res.send(data);
 });
 
@@ -213,7 +211,7 @@ app.get('/api/genres/:genreId', async (req, res) => {
       .from("genres")
       .select("*, eras (*)")
       .eq("genreId", genreId)
-    let isError = errorHandler(error, data, res, "Specified genre not found.");
+    let isError = errorHandler(error, data, res, `No genre with id ${genreId} found.`);
     if (!isError) res.send(data);
 });
 
@@ -224,7 +222,7 @@ app.get('/api/genres/painting/:paintingId', async (req, res) => {
       .from("paintinggenres")
       .select("genres (*)")
       .eq("paintingId", paintingId)
-    let isError = errorHandler(error, data, res, "No genres found for the painting.");
+    let isError = errorHandler(error, data, res, `No genres found for painting with id ${paintingId}.`);
     if (!isError) res.send(data);
 });
 
@@ -236,7 +234,7 @@ app.get('/api/paintings/genre/:genreId', async (req, res) => {
       .select("paintings ( paintingId, title, yearOfWork)")
       .eq("genreId", genreId)
       .order("yearOfWork", { ascending: true, foreignTable: "paintings" });
-    let isError = errorHandler(error, data, res, "No paintings found for the genre.");
+    let isError = errorHandler(error, data, res, `No paintings found for genre with id ${genreId}.`);
     if (!isError){
       const paintings = data.map((item) => item.paintings);
       res.send(paintings);
@@ -251,7 +249,7 @@ app.get('/api/paintings/era/:eraId', async (req, res) => {
       .select("paintings ( paintingId, title, yearOfWork), genres!inner ( eraId )")
       .eq("genres.eraId", eraId)
       .order("yearOfWork", { ascending: true, foreignTable: "paintings" });
-    let isError = errorHandler(error, data, res, "No paintings found for the era.");
+    let isError = errorHandler(error, data, res, `No paintings found for era with id ${eraId}.`);
     if (!isError){
       const paintings = data.map((item) => item.paintings);
       res.send(paintings);
@@ -264,7 +262,7 @@ app.get('/api/counts/genres', async (req, res) => {
     const { data, error } = await supabase
       .from("paintinggenres")
       .select("genreId, genres ( genreName )");
-    let isError = errorHandler(error, data, res, "No paintings found for given era.");
+    let isError = errorHandler(error, data, res, "No paintings found for genres.");
     if (isError) return;
 
     const paintingMap = {};
@@ -310,7 +308,7 @@ app.get('/api/counts/topgenres/:paintingCount', async (req, res) => {
     const { data, error } = await supabase
       .from("paintinggenres")
       .select("genreId, genres ( genreName )");
-    let isError = errorHandler(error, data, res, "No paintings found for given genre.");
+    let isError = errorHandler(error, data, res, `No paintings found for genres with more than ${minNum} paintings.`);
     if (isError) return;
 
     const paintingMap = {};
